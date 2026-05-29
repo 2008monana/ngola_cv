@@ -2,7 +2,7 @@
 // public/index.php - Roteador principal
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../app/helpers/Auth.php';
+require_once __DIR__ . '/../app/helpers/auth.php';
 require_once __DIR__ . '/../app/models/User.php';
 require_once __DIR__ . '/../app/models/Resume.php';
 require_once __DIR__ . '/../app/models/Template.php';
@@ -75,7 +75,11 @@ if ($page === 'api-salvar-curriculo' && $_SERVER['REQUEST_METHOD'] === 'POST' &&
     $user = Auth::getUser();
     
     // Log de TODOS os dados recebidos
-    $log_file = __DIR__ . '/../logs/save_debug.log';
+    $log_dir = __DIR__ . '/../logs';
+    if (!is_dir($log_dir)) {
+        mkdir($log_dir, 0775, true);
+    }
+    $log_file = $log_dir . '/save_debug.log';
     file_put_contents($log_file, "\n=== " . date('Y-m-d H:i:s') . " ===\n", FILE_APPEND);
     file_put_contents($log_file, "POST recebido:\n", FILE_APPEND);
     file_put_contents($log_file, print_r($_POST, true), FILE_APPEND);
