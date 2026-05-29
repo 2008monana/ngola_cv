@@ -2,15 +2,17 @@
 // public/index.php - Roteador principal
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../app/helpers/Auth.php';
+require_once __DIR__ . '/../app/helpers/auth.php';
 require_once __DIR__ . '/../app/models/User.php';
 require_once __DIR__ . '/../app/models/Resume.php';
 require_once __DIR__ . '/../app/models/Template.php';
 require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/PasswordController.php';
+require_once __DIR__ . '/../app/controllers/ProfileController.php';
 
 $db = (new Database())->getConnection();
 $authController = new AuthController($db);
+$profileController = new ProfileController($db);
 
 $page = $_GET['page'] ?? 'home';
 
@@ -75,7 +77,11 @@ if ($page === 'api-salvar-curriculo' && $_SERVER['REQUEST_METHOD'] === 'POST' &&
     $user = Auth::getUser();
     
     // Log de TODOS os dados recebidos
-    $log_file = __DIR__ . '/../logs/save_debug.log';
+    $log_dir = __DIR__ . '/../logs';
+    if (!is_dir($log_dir)) {
+        mkdir($log_dir, 0775, true);
+    }
+    $log_file = $log_dir . '/save_debug.log';
     file_put_contents($log_file, "\n=== " . date('Y-m-d H:i:s') . " ===\n", FILE_APPEND);
     file_put_contents($log_file, "POST recebido:\n", FILE_APPEND);
     file_put_contents($log_file, print_r($_POST, true), FILE_APPEND);
@@ -195,9 +201,25 @@ if ($page === 'excluir-curriculo' && Auth::isLoggedIn()) {
     exit();
 }
 
+// Ações do perfil do usuário
+if ($page === 'atualizar-perfil' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->updateProfile();
+    exit();
+}
+
+if ($page === 'alterar-senha' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->changePassword();
+    exit();
+}
+
+if ($page === 'excluir-conta' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->deleteAccount();
+    exit();
+}
+
 // Rotas públicas
 $public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade'];
-$auth_pages = ['dashboard', 'meus-curriculos', 'editor'];
+$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil'];
 
 // Verificar se precisa de autenticação
 if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
@@ -249,6 +271,12 @@ switch($page) {
         break;
     case 'planos':
         include __DIR__ . '/../app/views/plans/index.php';
+        break;
+    case 'perfil':
+        $page_title = 'Meu Perfil - Ngola CV';
+        $profileData = $profileController->getProfileData(Auth::getUser()['id']);
+        extract($profileData);
+        include __DIR__ . '/../app/views/profile/index.php';
         break;
     case 'esqueci-senha':
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
