@@ -245,24 +245,25 @@ class PDFGenerator {
             .cv-classico {
                 width: 100%;
                 background: white;
+                display: table;
+                table-layout: fixed;
+                border-collapse: collapse;
             }
             .cv-classico .cv-sidebar {
                 width: 33%;
-                float: left;
+                display: table-cell;
+                float: none;
+                vertical-align: top;
                 background: #2c3e66;
                 color: white;
                 padding: 20px;
-                min-height: 100%;
             }
             .cv-classico .cv-main {
                 width: 67%;
-                float: left;
+                display: table-cell;
+                float: none;
+                vertical-align: top;
                 padding: 20px;
-            }
-            .cv-classico:after {
-                content: "";
-                display: table;
-                clear: both;
             }
             .cv-classico .cv-foto {
                 text-align: center;
@@ -406,7 +407,7 @@ class PDFGenerator {
         <head>
             <meta charset="UTF-8">
             <title>Currículo - Ngola CV</title>
-            <style>' . $pdf_css . $custom_css . '</style>
+            <style>' . $custom_css . $pdf_css . '</style>
         </head>
         <body>
             <div class="pdf-wrapper">' . $content . '</div>
