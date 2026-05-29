@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/responsive.css">
 
-    <?php if (($page ?? '') === 'dashboard'): ?>
+    <?php if (($page ?? '') === 'dashboard' || str_starts_with(($page ?? ''), 'admin/')): ?>
         <!-- Chart.js para gráficos do dashboard -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <?php endif; ?>
@@ -55,6 +55,12 @@
                         <li><a href="index.php?page=dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
                         <li><a href="index.php?page=meus-curriculos"><i class="fas fa-file-alt"></i> Meus Currículos</a></li>
                         <li><a href="index.php?page=perfil"><i class="fas fa-user-edit"></i> Perfil</a></li>
+                        <?php if (!empty($_SESSION['user_id'])): ?>
+                            <?php $navUser = (new User((new Database())->getConnection()))->findById($_SESSION['user_id']); ?>
+                            <?php if (!empty($navUser['is_admin'])): ?>
+                                <li><a href="index.php?page=admin/dashboard"><i class="fas fa-shield-halved"></i> Admin</a></li>
+                            <?php endif; ?>
+                        <?php endif; ?>
                         <li><hr class="dropdown-divider"></li>
                         <li><a href="index.php?page=logout" onclick="return confirm('Deseja realmente sair?')"><i class="fas fa-sign-out-alt"></i> Sair</a></li>
                     </ul>

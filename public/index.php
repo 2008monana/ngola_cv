@@ -10,11 +10,13 @@ require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/PasswordController.php';
 require_once __DIR__ . '/../app/controllers/ProfileController.php';
 require_once __DIR__ . '/../app/controllers/PaymentController.php';
+require_once __DIR__ . '/../app/controllers/AdminController.php';
 
 $db = (new Database())->getConnection();
 $authController = new AuthController($db);
 $profileController = new ProfileController($db);
 $paymentController = new PaymentController($db);
+$adminController = new AdminController($db);
 
 $page = $_GET['page'] ?? 'home';
 
@@ -235,9 +237,30 @@ if ($page === 'plano-expirado') {
     exit();
 }
 
+
+// Ações administrativas
+if (str_starts_with($page, 'admin/')) {
+    $adminActionPages = [
+        'admin/usuario-salvar' => fn() => $adminController->saveUser(),
+        'admin/usuario-toggle' => fn() => $adminController->toggleUser(),
+        'admin/usuario-excluir' => fn() => $adminController->deleteUser(),
+        'admin/template-salvar' => fn() => $adminController->saveTemplate(),
+        'admin/template-excluir' => fn() => $adminController->deleteTemplate(),
+        'admin/pagamento-confirmar' => fn() => $adminController->updatePaymentStatus('aprovado'),
+        'admin/pagamento-reembolsar' => fn() => $adminController->updatePaymentStatus('reembolsado'),
+        'admin/pagamento-falhar' => fn() => $adminController->updatePaymentStatus('falhou'),
+        'admin/exportar-usuarios' => fn() => $adminController->exportCsv('usuarios'),
+        'admin/exportar-pagamentos' => fn() => $adminController->exportCsv('pagamentos')
+    ];
+    if (isset($adminActionPages[$page])) {
+        $adminActionPages[$page]();
+        exit();
+    }
+}
+
 // Rotas públicas
 $public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade', 'webhook-pagamento', 'plano-expirado'];
-$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil', 'checkout'];
+$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil', 'checkout', 'admin/dashboard', 'admin/usuarios', 'admin/templates', 'admin/pagamentos', 'admin/relatorios'];
 
 // Verificar se precisa de autenticação
 if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
@@ -249,7 +272,7 @@ if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
 $use_layout = true;
 
 // Páginas que NÃO devem usar o layout padrão
-$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf', 'webhook-pagamento', 'plano-expirado', 'processar-pagamento'];
+$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf', 'webhook-pagamento', 'plano-expirado', 'processar-pagamento', 'admin/exportar-usuarios', 'admin/exportar-pagamentos'];
 if (in_array($page, $no_layout_pages)) {
     $use_layout = false;
 }
@@ -275,6 +298,31 @@ switch($page) {
     case 'dashboard':
         $page_title = 'Dashboard - Ngola CV';
         include __DIR__ . '/../app/views/dashboard/index.php';
+        break;
+    case 'admin/dashboard':
+        $data = $adminController->dashboardData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/dashboard.php';
+        break;
+    case 'admin/usuarios':
+        $data = $adminController->usersData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/usuarios.php';
+        break;
+    case 'admin/templates':
+        $data = $adminController->templatesData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/templates.php';
+        break;
+    case 'admin/pagamentos':
+        $data = $adminController->paymentsData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/pagamentos.php';
+        break;
+    case 'admin/relatorios':
+        $data = $adminController->reportsData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/relatorios.php';
         break;
     case 'meus-curriculos':
         $page_title = 'Meus Currículos - Ngola CV';
