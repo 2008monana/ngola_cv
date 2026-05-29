@@ -14,6 +14,11 @@
     <!-- CSS Principal -->
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/responsive.css">
+
+    <?php if (($page ?? '') === 'dashboard'): ?>
+        <!-- Chart.js para gráficos do dashboard -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <?php endif; ?>
 </head>
 <body>
 
