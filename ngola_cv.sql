@@ -48,6 +48,8 @@ CREATE TABLE `payments` (
   `valor_kwanza` decimal(10,2) NOT NULL,
   `plano_comprado` enum('premium','profissional') NOT NULL,
   `tipo` enum('mensal','unico') DEFAULT 'mensal',
+  `metodo_pagamento` enum('multicaixa_express','cartao','transferencia') DEFAULT 'multicaixa_express',
+  `titular` varchar(120) DEFAULT NULL,
   `referencia_multicaixa` varchar(100) DEFAULT NULL,
   `status` enum('pendente','aprovado','falhou','reembolsado') DEFAULT 'pendente',
   `data_solicitacao` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -121,21 +123,24 @@ CREATE TABLE `users` (
   `email` varchar(100) NOT NULL,
   `senha_hash` varchar(255) NOT NULL,
   `telefone` varchar(20) DEFAULT NULL,
+  `endereco` varchar(255) DEFAULT NULL,
+  `avatar_url` varchar(255) DEFAULT NULL,
   `plano` enum('gratuito','premium','profissional') DEFAULT 'gratuito',
   `data_expiracao_plano` date DEFAULT NULL,
   `reset_token` varchar(255) DEFAULT NULL,
   `reset_token_expira` datetime DEFAULT NULL,
   `data_cadastro` timestamp NOT NULL DEFAULT current_timestamp(),
   `ultimo_login` timestamp NULL DEFAULT NULL,
-  `ativo` tinyint(1) DEFAULT 1
+  `ativo` tinyint(1) DEFAULT 1,
+  `is_admin` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Extraindo dados da tabela `users`
 --
 
-INSERT INTO `users` (`id`, `nome_completo`, `email`, `senha_hash`, `telefone`, `plano`, `data_expiracao_plano`, `reset_token`, `reset_token_expira`, `data_cadastro`, `ultimo_login`, `ativo`) VALUES
-(1, 'Renato Monana', '2008Monana@gmail.com', '$2y$10$8dKlekPa9BAW4E3rxfrzP.2.tNGNJrHz7DaT6CYdsrV2vAZBTKpim', NULL, 'gratuito', NULL, NULL, NULL, '2026-05-29 15:36:11', '2026-05-29 16:23:53', 1);
+INSERT INTO `users` (`id`, `nome_completo`, `email`, `senha_hash`, `telefone`, `endereco`, `avatar_url`, `plano`, `data_expiracao_plano`, `reset_token`, `reset_token_expira`, `data_cadastro`, `ultimo_login`, `ativo`, `is_admin`) VALUES
+(1, 'Renato Monana', '2008Monana@gmail.com', '$2y$10$8dKlekPa9BAW4E3rxfrzP.2.tNGNJrHz7DaT6CYdsrV2vAZBTKpim', NULL, NULL, NULL, 'gratuito', NULL, NULL, NULL, '2026-05-29 15:36:11', '2026-05-29 16:23:53', 1, 1);
 
 --
 -- Índices para tabelas despejadas

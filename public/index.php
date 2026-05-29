@@ -2,15 +2,21 @@
 // public/index.php - Roteador principal
 
 require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../app/helpers/Auth.php';
+require_once __DIR__ . '/../app/helpers/auth.php';
 require_once __DIR__ . '/../app/models/User.php';
 require_once __DIR__ . '/../app/models/Resume.php';
 require_once __DIR__ . '/../app/models/Template.php';
 require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/PasswordController.php';
+require_once __DIR__ . '/../app/controllers/ProfileController.php';
+require_once __DIR__ . '/../app/controllers/PaymentController.php';
+require_once __DIR__ . '/../app/controllers/AdminController.php';
 
 $db = (new Database())->getConnection();
 $authController = new AuthController($db);
+$profileController = new ProfileController($db);
+$paymentController = new PaymentController($db);
+$adminController = new AdminController($db);
 
 $page = $_GET['page'] ?? 'home';
 
@@ -75,7 +81,11 @@ if ($page === 'api-salvar-curriculo' && $_SERVER['REQUEST_METHOD'] === 'POST' &&
     $user = Auth::getUser();
     
     // Log de TODOS os dados recebidos
-    $log_file = __DIR__ . '/../logs/save_debug.log';
+    $log_dir = __DIR__ . '/../logs';
+    if (!is_dir($log_dir)) {
+        mkdir($log_dir, 0775, true);
+    }
+    $log_file = $log_dir . '/save_debug.log';
     file_put_contents($log_file, "\n=== " . date('Y-m-d H:i:s') . " ===\n", FILE_APPEND);
     file_put_contents($log_file, "POST recebido:\n", FILE_APPEND);
     file_put_contents($log_file, print_r($_POST, true), FILE_APPEND);
@@ -195,9 +205,62 @@ if ($page === 'excluir-curriculo' && Auth::isLoggedIn()) {
     exit();
 }
 
+// Ações do perfil do usuário
+if ($page === 'atualizar-perfil' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->updateProfile();
+    exit();
+}
+
+if ($page === 'alterar-senha' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->changePassword();
+    exit();
+}
+
+if ($page === 'excluir-conta' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $profileController->deleteAccount();
+    exit();
+}
+
+// Ações de pagamento simulado
+if ($page === 'processar-pagamento' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $paymentController->processPayment();
+    exit();
+}
+
+if ($page === 'webhook-pagamento') {
+    $paymentController->webhook();
+    exit();
+}
+
+if ($page === 'plano-expirado') {
+    $paymentController->expirePlans();
+    exit();
+}
+
+
+// Ações administrativas
+if (str_starts_with($page, 'admin/')) {
+    $adminActionPages = [
+        'admin/usuario-salvar' => fn() => $adminController->saveUser(),
+        'admin/usuario-toggle' => fn() => $adminController->toggleUser(),
+        'admin/usuario-excluir' => fn() => $adminController->deleteUser(),
+        'admin/template-salvar' => fn() => $adminController->saveTemplate(),
+        'admin/template-excluir' => fn() => $adminController->deleteTemplate(),
+        'admin/pagamento-confirmar' => fn() => $adminController->updatePaymentStatus('aprovado'),
+        'admin/pagamento-reembolsar' => fn() => $adminController->updatePaymentStatus('reembolsado'),
+        'admin/pagamento-falhar' => fn() => $adminController->updatePaymentStatus('falhou'),
+        'admin/exportar-usuarios' => fn() => $adminController->exportCsv('usuarios'),
+        'admin/exportar-pagamentos' => fn() => $adminController->exportCsv('pagamentos')
+    ];
+    if (isset($adminActionPages[$page])) {
+        $adminActionPages[$page]();
+        exit();
+    }
+}
+
 // Rotas públicas
-$public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade'];
-$auth_pages = ['dashboard', 'meus-curriculos', 'editor'];
+$public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade', 'webhook-pagamento', 'plano-expirado'];
+$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil', 'checkout', 'admin/dashboard', 'admin/usuarios', 'admin/templates', 'admin/pagamentos', 'admin/relatorios'];
 
 // Verificar se precisa de autenticação
 if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
@@ -209,7 +272,7 @@ if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
 $use_layout = true;
 
 // Páginas que NÃO devem usar o layout padrão
-$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf'];
+$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf', 'webhook-pagamento', 'plano-expirado', 'processar-pagamento', 'admin/exportar-usuarios', 'admin/exportar-pagamentos'];
 if (in_array($page, $no_layout_pages)) {
     $use_layout = false;
 }
@@ -236,6 +299,31 @@ switch($page) {
         $page_title = 'Dashboard - Ngola CV';
         include __DIR__ . '/../app/views/dashboard/index.php';
         break;
+    case 'admin/dashboard':
+        $data = $adminController->dashboardData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/dashboard.php';
+        break;
+    case 'admin/usuarios':
+        $data = $adminController->usersData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/usuarios.php';
+        break;
+    case 'admin/templates':
+        $data = $adminController->templatesData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/templates.php';
+        break;
+    case 'admin/pagamentos':
+        $data = $adminController->paymentsData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/pagamentos.php';
+        break;
+    case 'admin/relatorios':
+        $data = $adminController->reportsData();
+        extract($data);
+        include __DIR__ . '/../app/views/admin/relatorios.php';
+        break;
     case 'meus-curriculos':
         $page_title = 'Meus Currículos - Ngola CV';
         include __DIR__ . '/../app/views/resumes/index.php';
@@ -249,6 +337,18 @@ switch($page) {
         break;
     case 'planos':
         include __DIR__ . '/../app/views/plans/index.php';
+        break;
+    case 'checkout':
+        $page_title = 'Checkout - Ngola CV';
+        $checkoutData = $paymentController->getCheckoutData($_GET['plano'] ?? '');
+        extract($checkoutData);
+        include __DIR__ . '/../app/views/plans/checkout.php';
+        break;
+    case 'perfil':
+        $page_title = 'Meu Perfil - Ngola CV';
+        $profileData = $profileController->getProfileData(Auth::getUser()['id']);
+        extract($profileData);
+        include __DIR__ . '/../app/views/profile/index.php';
         break;
     case 'esqueci-senha':
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
