@@ -9,10 +9,12 @@ require_once __DIR__ . '/../app/models/Template.php';
 require_once __DIR__ . '/../app/controllers/AuthController.php';
 require_once __DIR__ . '/../app/controllers/PasswordController.php';
 require_once __DIR__ . '/../app/controllers/ProfileController.php';
+require_once __DIR__ . '/../app/controllers/PaymentController.php';
 
 $db = (new Database())->getConnection();
 $authController = new AuthController($db);
 $profileController = new ProfileController($db);
+$paymentController = new PaymentController($db);
 
 $page = $_GET['page'] ?? 'home';
 
@@ -217,9 +219,25 @@ if ($page === 'excluir-conta' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::
     exit();
 }
 
+// Ações de pagamento simulado
+if ($page === 'processar-pagamento' && $_SERVER['REQUEST_METHOD'] === 'POST' && Auth::isLoggedIn()) {
+    $paymentController->processPayment();
+    exit();
+}
+
+if ($page === 'webhook-pagamento') {
+    $paymentController->webhook();
+    exit();
+}
+
+if ($page === 'plano-expirado') {
+    $paymentController->expirePlans();
+    exit();
+}
+
 // Rotas públicas
-$public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade'];
-$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil'];
+$public_pages = ['home', 'login', 'cadastro', 'templates', 'planos', 'sobre', 'faq', 'termos', 'privacidade', 'webhook-pagamento', 'plano-expirado'];
+$auth_pages = ['dashboard', 'meus-curriculos', 'editor', 'perfil', 'checkout'];
 
 // Verificar se precisa de autenticação
 if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
@@ -231,7 +249,7 @@ if (!in_array($page, $public_pages) && !Auth::isLoggedIn()) {
 $use_layout = true;
 
 // Páginas que NÃO devem usar o layout padrão
-$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf'];
+$no_layout_pages = ['api-preview', 'api-salvar-curriculo', 'api-exportar-pdf', 'webhook-pagamento', 'plano-expirado', 'processar-pagamento'];
 if (in_array($page, $no_layout_pages)) {
     $use_layout = false;
 }
@@ -271,6 +289,12 @@ switch($page) {
         break;
     case 'planos':
         include __DIR__ . '/../app/views/plans/index.php';
+        break;
+    case 'checkout':
+        $page_title = 'Checkout - Ngola CV';
+        $checkoutData = $paymentController->getCheckoutData($_GET['plano'] ?? '');
+        extract($checkoutData);
+        include __DIR__ . '/../app/views/plans/checkout.php';
         break;
     case 'perfil':
         $page_title = 'Meu Perfil - Ngola CV';

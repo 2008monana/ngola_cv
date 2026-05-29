@@ -10,6 +10,48 @@ class Mailer {
         return mail($to, $subject, $message, $headers);
     }
     
+
+    public static function sendPaymentConfirmation($to, $nome, $paymentData) {
+        $plano = htmlspecialchars($paymentData['plano'] ?? 'Plano');
+        $valor = number_format((float)($paymentData['valor'] ?? 0), 2, ',', '.');
+        $referencia = htmlspecialchars($paymentData['referencia'] ?? '');
+        $expiracao = !empty($paymentData['expiracao']) ? date('d/m/Y', strtotime($paymentData['expiracao'])) : '30 dias';
+        $nome = htmlspecialchars($nome);
+
+        $message = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; color: #333; }
+                .container { max-width: 620px; margin: 0 auto; padding: 20px; }
+                .header { background: #2c3e66; color: white; padding: 22px; text-align: center; }
+                .content { padding: 24px; background: #f9f9f9; }
+                .summary { background: white; padding: 16px; border-radius: 8px; margin: 18px 0; }
+                .footer { text-align: center; padding: 16px; font-size: 12px; color: #777; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'><h2>Pagamento confirmado - Ngola CV</h2></div>
+                <div class='content'>
+                    <h3>Olá, {$nome}!</h3>
+                    <p>Recebemos a confirmação do seu pagamento simulado.</p>
+                    <div class='summary'>
+                        <p><strong>Plano:</strong> {$plano}</p>
+                        <p><strong>Valor:</strong> {$valor} Kz</p>
+                        <p><strong>Referência:</strong> {$referencia}</p>
+                        <p><strong>Válido até:</strong> {$expiracao}</p>
+                    </div>
+                    <p>Seu plano já está ativo. Obrigado por usar a Ngola CV.</p>
+                </div>
+                <div class='footer'>Ngola CV - Feito em Angola</div>
+            </div>
+        </body>
+        </html>";
+
+        return self::send($to, 'Confirmação de Pagamento - Ngola CV', $message);
+    }
+
     public static function sendResetPassword($to, $nome, $token) {
         $link = "http://" . $_SERVER['HTTP_HOST'] . "/ngola-cv/public/index.php?page=redefinir-senha&token=" . $token;
         

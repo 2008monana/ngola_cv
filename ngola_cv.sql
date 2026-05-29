@@ -48,6 +48,8 @@ CREATE TABLE `payments` (
   `valor_kwanza` decimal(10,2) NOT NULL,
   `plano_comprado` enum('premium','profissional') NOT NULL,
   `tipo` enum('mensal','unico') DEFAULT 'mensal',
+  `metodo_pagamento` enum('multicaixa_express','cartao','transferencia') DEFAULT 'multicaixa_express',
+  `titular` varchar(120) DEFAULT NULL,
   `referencia_multicaixa` varchar(100) DEFAULT NULL,
   `status` enum('pendente','aprovado','falhou','reembolsado') DEFAULT 'pendente',
   `data_solicitacao` timestamp NOT NULL DEFAULT current_timestamp(),
