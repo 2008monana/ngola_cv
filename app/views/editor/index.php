@@ -303,28 +303,40 @@ $(document).ready(function() {
         }, 500);
     }
     
-    function saveResume() {
-    const data = getFormData();
-    const resumeId = $('#resumeId').val();
-    const templateId = $('#templateSelect').val();
-    const titulo = data.nome ? data.nome + ' - Currículo' : 'Meu Currículo';
-    
-    console.log('=== DADOS ENVIADOS ===');
-    console.log('Resume ID:', resumeId);
-    console.log('Template ID SELECIONADO:', templateId);
-    console.log('Título:', titulo);
-        
-        if (!data.nome) {
+    function saveResume(options = {}) {
+        const settings = Object.assign({
+            silent: false,
+            validateName: true,
+            onSuccess: null,
+            onError: null
+        }, options);
+
+        const data = getFormData();
+        const resumeId = $('#resumeId').val();
+        const templateId = $('#templateSelect').val();
+        const titulo = data.nome ? data.nome + ' - Currículo' : 'Meu Currículo';
+
+        console.log('=== DADOS ENVIADOS ===');
+        console.log('Resume ID:', resumeId);
+        console.log('Template ID SELECIONADO:', templateId);
+        console.log('Título:', titulo);
+
+        if (settings.validateName && !data.nome) {
             alert('⚠️ Por favor, preencha o nome completo.');
+            if (settings.onError) {
+                settings.onError('Nome completo obrigatório');
+            }
             return;
         }
-        
+
         const saveBtn = $('#saveBtn');
         const originalText = saveBtn.html();
-        saveBtn.html('<i class="fas fa-spinner fa-spin"></i> Salvando...').prop('disabled', true);
-        
+        if (!settings.silent) {
+            saveBtn.html('<i class="fas fa-spinner fa-spin"></i> Salvando...').prop('disabled', true);
+        }
+
         console.log('Salvando - Template ID:', templateId);
-        
+
         $.ajax({
             url: 'index.php?page=api-salvar-curriculo',
             method: 'POST',
@@ -337,43 +349,99 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    alert('✅ Currículo salvo com sucesso!');
+                    if (!settings.silent) {
+                        alert('✅ Currículo salvo com sucesso!');
+                    }
                     if (!resumeId || resumeId === 'null') {
-                        window.location.href = 'index.php?page=editor&id=' + response.id;
+                        if (settings.onSuccess) {
+                            settings.onSuccess(response);
+                        } else {
+                            window.location.href = 'index.php?page=editor&id=' + response.id;
+                        }
                     } else {
                         $('#resumeId').val(response.id);
                         $('#exportPdfBtn').prop('disabled', false);
+                        if (settings.onSuccess) {
+                            settings.onSuccess(response);
+                        }
                     }
                 } else {
-                    alert('❌ Erro ao salvar: ' + (response.error || 'Tente novamente'));
+                    if (!settings.silent) {
+                        alert('❌ Erro ao salvar: ' + (response.error || 'Tente novamente'));
+                    }
+                    if (settings.onError) {
+                        settings.onError(response.error || 'Erro ao salvar');
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Erro:', error);
-                alert('❌ Erro de conexão: ' + error);
+                if (!settings.silent) {
+                    alert('❌ Erro de conexão: ' + error);
+                }
+                if (settings.onError) {
+                    settings.onError(error);
+                }
             },
             complete: function() {
-                saveBtn.html(originalText).prop('disabled', false);
+                if (!settings.silent) {
+                    saveBtn.html(originalText).prop('disabled', false);
+                }
             }
         });
     }
-    
+
+    function saveSelectedTemplate() {
+        const resumeId = $('#resumeId').val();
+        if (!resumeId || resumeId === 'null') {
+            return;
+        }
+
+        saveResume({
+            silent: true,
+            validateName: false,
+            onSuccess: function(response) {
+                console.log('Template salvo no banco:', response.template_salvo);
+            },
+            onError: function(error) {
+                console.error('Erro ao salvar template selecionado:', error);
+            }
+        });
+    }
+
     function exportPDF() {
         const resumeId = $('#resumeId').val();
         if (!resumeId || resumeId === 'null') {
             alert('⚠️ Salve o currículo primeiro antes de exportar PDF.');
             return;
         }
-        window.open('index.php?page=api-exportar-pdf&id=' + resumeId, '_blank');
+
+        const exportBtn = $('#exportPdfBtn');
+        const originalText = exportBtn.html();
+        exportBtn.html('<i class="fas fa-spinner fa-spin"></i> Preparando PDF...').prop('disabled', true);
+
+        saveResume({
+            silent: true,
+            validateName: true,
+            onSuccess: function(response) {
+                exportBtn.html(originalText).prop('disabled', false);
+                window.open('index.php?page=api-exportar-pdf&id=' + response.id, '_blank');
+            },
+            onError: function(error) {
+                exportBtn.html(originalText).prop('disabled', false);
+                alert('❌ Não foi possível salvar o template atual antes de exportar: ' + error);
+            }
+        });
     }
-    
+
     // Eventos
-    $('#saveBtn').click(saveResume);
+    $('#saveBtn').click(function() { saveResume(); });
     $('#previewBtn').click(updatePreview);
     $('#exportPdfBtn').click(exportPDF);
     $('#templateSelect').on('change', function() {
         console.log('Template alterado para:', $(this).val());
         updatePreview();
+        saveSelectedTemplate();
     });
     $('input, textarea').on('input', updatePreview);
     
